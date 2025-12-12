@@ -103,6 +103,12 @@ def run_experiments(
     )
 
     # Foresight: (1) optimize-only stencil2d across 1-8 threads.
+    foresight_threads_env = os.environ.get("FORESIGHT_THREAD_COUNTS")
+    if foresight_threads_env:
+        # Convert space-separated list (e.g. "1 2 4 8") to CLI format "1,2,4,8"
+        foresight_threads = ",".join(foresight_threads_env.split())
+    else:
+        foresight_threads = "1-8"
     run_cmd(
         [
             "python3",
@@ -111,7 +117,7 @@ def run_experiments(
             f"-t{timeout}",
             "--limit-steps",
             "--engine=foresight",
-            "--foresight-thread-counts=1-8",
+            f"--foresight-thread-counts={foresight_threads}",
             "--optimize-only",
             "stencil2d",
         ],
