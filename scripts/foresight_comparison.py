@@ -35,6 +35,42 @@ INPUT_HEADER = [
 OUTPUT_HEADER = ["Kernel", "egg", "egglog", "hegg", "slotted", "foresight", "foresight8"]
 
 
+def produce_measurements_csv(*, exp_out: Path) -> Path:
+    """Run foresight-comparison benchmarks and write measurements.csv.
+
+    Returns the path to the generated measurements CSV.
+    """
+    bench_seconds = os.environ.get("BENCH_SECONDS", "60")
+    foresight_threads = os.environ.get("FORESIGHT_THREAD_COUNTS", "1 8")
+
+    repo_dir = Path("foresight-comparison")
+    thread_args = foresight_threads.split()
+
+    cmd = [
+        "python3",
+        "-u",
+        "run_benchmarks.py",
+        "--seconds",
+        bench_seconds,
+        "--foresight-thread-counts",
+        *thread_args,
+        "--foresight-mutable-egraph",
+        "true",
+    ]
+
+    stdout = run_cmd(cmd, cwd=repo_dir)
+
+    write_text(exp_out / "stdout.txt", stdout)
+
+    header, rows = parse_measurements_csv_from_stdout(stdout)
+
+    measurements_path = exp_out / "measurements.csv"
+    write_csv(measurements_path, header, rows)
+    eprint(f"[eval] wrote measurements: {measurements_path}")
+
+    return measurements_path
+
+
 def parse_measurements_csv_from_stdout(stdout: str) -> Tuple[List[str], List[List[str]]]:
     """Parse the benchmark CSV printed to stdout.
 
@@ -174,38 +210,9 @@ def make_ratios_chart(outdir: Path, ratio_rows: Sequence[Sequence[object]]) -> N
     eprint(f"[eval] wrote chart: {out_path}")
 
 
-def run_foresight_comparison(*, out_root: Path) -> None:
-    exp_name = "foresight-comparison"
-    exp_out = out_root / exp_name
-    ensure_dir(exp_out)
-
-    bench_seconds = os.environ.get("BENCH_SECONDS", "60")
-    foresight_threads = os.environ.get("FORESIGHT_THREAD_COUNTS", "1 8")
-
-    repo_dir = Path("foresight-comparison")
-    thread_args = foresight_threads.split()
-
-    cmd = [
-        "python3",
-        "-u",
-        "run_benchmarks.py",
-        "--seconds",
-        bench_seconds,
-        "--foresight-thread-counts",
-        *thread_args,
-        "--foresight-mutable-egraph",
-        "true",
-    ]
-
-    stdout = run_cmd(cmd, cwd=repo_dir)
-
-    write_text(exp_out / "stdout.txt", stdout)
-
-    header, rows = parse_measurements_csv_from_stdout(stdout)
-
-    measurements_path = exp_out / "measurements.csv"
-    write_csv(measurements_path, header, rows)
-    eprint(f"[eval] wrote measurements: {measurements_path}")
+def process_measurements_csv(*, exp_out: Path, measurements_path: Path) -> None:
+    """Process an existing measurements.csv into ratios.csv and ratios.png."""
+    header, rows = read_csv(measurements_path)
 
     ratio_rows = compute_ratios_rows(header, rows)
     ratios_path = exp_out / "ratios.csv"
@@ -213,3 +220,22 @@ def run_foresight_comparison(*, out_root: Path) -> None:
     eprint(f"[eval] wrote ratios: {ratios_path}")
 
     make_ratios_chart(exp_out, ratio_rows)
+
+
+def run_foresight_comparison(*, out_root: Path) -> None:
+    exp_name = "foresight-comparison"
+    exp_out = out_root / exp_name
+    ensure_dir(exp_out)
+
+    measurements_path = exp_out / "measurements.csv"
+
+    # By default, do not regenerate measurements if they already exist.
+    # Set FORCE_RERUN=1 to rerun benchmarks and overwrite measurements.csv.
+    force_rerun = os.environ.get("FORCE_RERUN", "0") not in ("0", "false", "False", "")
+
+    if (not force_rerun) and measurements_path.exists():
+        eprint(f"[eval] reusing existing measurements: {measurements_path}")
+    else:
+        measurements_path = produce_measurements_csv(exp_out=exp_out)
+
+    process_measurements_csv(exp_out=exp_out, measurements_path=measurements_path)

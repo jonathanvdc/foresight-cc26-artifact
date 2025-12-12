@@ -9,7 +9,7 @@ import csv
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, Iterable, Optional, Sequence
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 
 def eprint(*args: object) -> None:
@@ -58,3 +58,13 @@ def write_csv(path: Path, header: Sequence[str], rows: Iterable[Sequence[object]
         w.writerow(list(header))
         for r in rows:
             w.writerow(list(r))
+
+def read_csv(path: Path) -> Tuple[List[str], List[List[str]]]:
+    """Read a CSV file and return (header, rows) as strings."""
+    with path.open(newline="") as f:
+        reader = csv.reader(f)
+        header = next(reader, None)
+        if header is None:
+            raise ValueError(f"missing CSV header in {path}")
+        rows: List[List[str]] = [row for row in reader if row]
+    return header, rows
