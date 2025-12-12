@@ -101,6 +101,12 @@ RUN git clone --recursive https://github.com/jonathanvdc/incremental-eqsat-evalu
 # Pre-build incremental eqsat project
 RUN cd /workspace/incremental-eqsat/foresight && sbt benchmarks/jmh:compile
 
+# Clone LIAR repository
+RUN git clone --recursive -b cc26-artifact https://bitbucket.org/cdubach/shir.git /workspace/liar
+
+# Pre-build LIAR project
+RUN cd /workspace/liar && sbt compile
+
 COPY scripts /workspace/scripts
 
 # # Default command: run benchmarks with --seconds from env variable, redirecting all output to stderr
