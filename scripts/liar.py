@@ -190,7 +190,7 @@ def _parse_float(value: str, *, ctx: str) -> float:
 def _format_speedup_x(ratio: float) -> str:
     """Format the Table 1 speedup column.
 
-    The paper reports Sp. in the range 1x..10x. We clamp and round to the
+    The paper reports Sp. in the range 1x.. We clamp and round to the
     nearest integer.
     """
     if ratio != ratio or ratio == float("inf") or ratio == float("-inf"):
@@ -218,7 +218,7 @@ def compute_table1_rows(*, out_root: Path) -> list[dict[str, str]]:
 
     Speedup rule:
       sp = foresight_speedups['blas.simple.1'] / baseline_speedups['blas.simple.1']
-      formatted as 1x..10x (clamped).
+      formatted as 1x.. (clamped).
     """
 
     base_plots = out_root / "results" / "liar" / "baseline" / "plots"
