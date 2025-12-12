@@ -39,8 +39,7 @@ results/
 └── foresight-comparison/
     ├── measurements.csv
     ├── ratios.csv
-    ├── ratios.png
-    └── stdout.txt
+    └── ratios.png
 ```
 
 The total runtime is on the order of a few minutes on a typical modern machine.
