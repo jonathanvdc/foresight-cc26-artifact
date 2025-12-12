@@ -10,59 +10,9 @@ from __future__ import annotations
 import csv
 import os
 import re
-import subprocess
-import sys
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
-
-
-# -----------------------------
-# Small helpers (local to this experiment)
-# -----------------------------
-
-def eprint(*args: object) -> None:
-    print(*args, file=sys.stderr)
-
-
-def ensure_dir(p: Path) -> None:
-    p.mkdir(parents=True, exist_ok=True)
-
-
-def run_cmd(
-    cmd: Sequence[str],
-    *,
-    cwd: Optional[Path] = None,
-    env: Optional[Dict[str, str]] = None,
-) -> str:
-    """Run a command and return stdout as text; raise on failure."""
-    eprint(f"[eval] running: {' '.join(cmd)}")
-    if cwd is not None:
-        eprint(f"[eval]   cwd: {cwd}")
-    res = subprocess.run(
-        list(cmd),
-        cwd=str(cwd) if cwd is not None else None,
-        env=env,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        check=False,
-    )
-    if res.returncode != 0:
-        eprint(res.stdout)
-        raise RuntimeError(f"command failed with exit code {res.returncode}: {' '.join(cmd)}")
-    return res.stdout
-
-
-def write_text(path: Path, text: str) -> None:
-    path.write_text(text, encoding="utf-8")
-
-
-def write_csv(path: Path, header: Sequence[str], rows: Iterable[Sequence[object]]) -> None:
-    with path.open("w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(list(header))
-        for r in rows:
-            w.writerow(list(r))
+from typing import Dict, List, Optional, Sequence, Tuple
+from common import eprint, ensure_dir, run_cmd, write_csv, write_text
 
 
 # -----------------------------
@@ -269,12 +219,3 @@ def run_foresight_comparison(*, out_root: Path) -> None:
     eprint(f"[eval] wrote ratios: {ratios_path}")
 
     make_ratios_chart(exp_out, ratio_rows)
-
-
-# This is what eval.py imports.
-def run_foresight_comparison_wrapper(out_root: Path) -> None:
-    run_foresight_comparison(out_root=out_root)
-
-
-# Backward-compatible name expected by eval.py after the refactor:
-run_foresight_comparison = run_foresight_comparison  # noqa: E305
