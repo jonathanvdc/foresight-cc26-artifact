@@ -109,5 +109,7 @@ RUN cd /workspace/liar && sbt compile
 
 COPY scripts /workspace/scripts
 
-# # Default command: run benchmarks with --seconds from env variable, redirecting all output to stderr
-CMD ["/bin/bash", "-lc", "python3 scripts/eval.py"]
+# Default entrypoint: run the evaluation driver.
+# Any args passed to `docker run <image> ...` are forwarded to eval.py.
+# If no args are provided, eval.py assumes all experiments should be run.
+ENTRYPOINT ["python3", "-u", "/workspace/scripts/eval.py"]
