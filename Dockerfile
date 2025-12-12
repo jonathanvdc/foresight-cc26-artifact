@@ -82,16 +82,19 @@ ENV PATH="/root/.ghcup/bin:/root/.cabal/bin:/root/.cargo/bin:${PATH}"
 # Set Stack’s working directory
 ENV STACK_ROOT="/root/.stack"
 
-COPY . /workspace
+# Create workspace directory
+RUN mkdir -p /workspace
 
-# Clone benchmark repositories
+# Clone Foresight comparison repository
 RUN git clone --recursive https://github.com/jonathanvdc/foresight-comparison.git /workspace/foresight-comparison
 
-# (Optional) Pre-build benchmark projects
+# (Optional) Pre-build Foresight comparison benchmark projects
 RUN cd /workspace/foresight-comparison/slotted && cargo build --release
 RUN cd /workspace/foresight-comparison/egg && cargo build --release
 RUN cd /workspace/foresight-comparison/hegg-bench && stack --system-ghc --no-install-ghc build
 RUN cd /workspace/foresight-comparison/foresight && sbt benchmarks/jmh:compile
+
+COPY eval.py /workspace/eval.py
 
 # # Default command: run benchmarks with --seconds from env variable, redirecting all output to stderr
 # CMD ["/bin/bash", "-lc", "python3 -u run_benchmarks.py --seconds \"${BENCH_SECONDS}\" --foresight-thread-counts ${FORESIGHT_THREAD_COUNTS} --foresight-mutable-egraph true 1>&2 && cat results.csv"]
