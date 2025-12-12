@@ -26,6 +26,7 @@ import os
 from pathlib import Path
 
 from common import eprint, ensure_dir, run_cmd
+import csv
 
 
 EXPERIMENT_NAME = "liar"
@@ -129,3 +130,126 @@ def run(
         cwd=foresight_dir,
         capture_stdout=False,
     )
+
+    # Reproduce Table 1 from the paper.
+    table1_path = liar_dir / "table-1.csv"
+    table1_rows = compute_table1_rows(out_root=out_root)
+    # Deterministic order.
+    table1_rows.sort(key=lambda r: r.get("kernel", ""))
+
+    with table1_path.open("w", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["kernel", "liar_solution", "intuition_solution", "sp"],
+        )
+        writer.writeheader()
+        writer.writerows(table1_rows)
+
+    eprint(f"[{EXPERIMENT_NAME}] Wrote Table 1 to: {table1_path}")
+
+
+# Helper functions to reproduce Table 1 from the paper.
+def _read_csv_by_key(path: Path, key: str) -> dict[str, dict[str, str]]:
+    """Read a CSV file into a dict keyed by a column value."""
+    if not path.exists():
+        raise FileNotFoundError(f"Missing CSV: {path}")
+
+    with path.open("r", newline="") as f:
+        reader = csv.DictReader(f)
+        if reader.fieldnames is None or key not in reader.fieldnames:
+            raise ValueError(f"CSV {path} missing required column: {key}")
+        out: dict[str, dict[str, str]] = {}
+        for row in reader:
+            k = (row.get(key) or "").strip()
+            if not k:
+                continue
+            out[k] = row
+        return out
+
+
+def _parse_float(value: str, *, ctx: str) -> float:
+    try:
+        return float(value)
+    except Exception as ex:
+        raise ValueError(f"Could not parse float for {ctx}: {value!r}") from ex
+
+
+def _format_speedup_x(ratio: float) -> str:
+    """Format the Table 1 speedup column.
+
+    The paper reports Sp. in the range 1x..10x. We clamp and round to the
+    nearest integer.
+    """
+    if ratio != ratio or ratio == float("inf") or ratio == float("-inf"):
+        return "?x"
+    rounded = int(round(ratio))
+    if rounded < 1:
+        rounded = 1
+    if rounded > 10:
+        rounded = 10
+    return f"{rounded}x"
+
+
+def compute_table1_rows(*, out_root: Path) -> list[dict[str, str]]:
+    """Compute the rows for Table 1 (BLAS idioms where Intuition beats LIAR).
+
+    Returns a list of dicts with keys:
+      - kernel
+      - liar_solution
+      - intuition_solution
+      - sp
+
+    Selection rule:
+      Include kernels where the `externs` field differs between baseline and
+      foresight in `blas-overview.csv`.
+
+    Speedup rule:
+      sp = foresight_speedups['blas.simple.1'] / baseline_speedups['blas.simple.1']
+      formatted as 1x..10x (clamped).
+    """
+
+    base_plots = out_root / "results" / "liar" / "baseline" / "plots"
+    fore_plots = out_root / "results" / "liar" / "foresight" / "plots"
+
+    base_overview = _read_csv_by_key(base_plots / "blas-overview.csv", "name")
+    fore_overview = _read_csv_by_key(fore_plots / "blas-overview.csv", "name")
+
+    base_speedups = _read_csv_by_key(base_plots / "speedups.csv", "benchmark")
+    fore_speedups = _read_csv_by_key(fore_plots / "speedups.csv", "benchmark")
+
+    rows: list[dict[str, str]] = []
+
+    common_kernels = sorted(set(base_overview.keys()) & set(fore_overview.keys()))
+    for k in common_kernels:
+        base_externs = (base_overview[k].get("externs") or "").strip()
+        fore_externs = (fore_overview[k].get("externs") or "").strip()
+        if base_externs == fore_externs:
+            continue
+
+        # Speedups are keyed by benchmark name.
+        if k not in base_speedups or k not in fore_speedups:
+            # Some rows (e.g., geomean) exist only in speedups; ignore missing.
+            continue
+
+        base_blas = base_speedups[k].get("blas.simple.1")
+        fore_blas = fore_speedups[k].get("blas.simple.1")
+        if base_blas is None or fore_blas is None:
+            continue
+
+        base_blas_f = _parse_float(base_blas, ctx=f"baseline blas.simple.1 for {k}")
+        fore_blas_f = _parse_float(fore_blas, ctx=f"foresight blas.simple.1 for {k}")
+        if base_blas_f == 0.0:
+            sp = "?x"
+        else:
+            sp = _format_speedup_x(fore_blas_f / base_blas_f)
+
+        rows.append(
+            {
+                "kernel": k,
+                "liar_solution": base_externs,
+                "intuition_solution": fore_externs,
+                "sp": sp,
+            }
+        )
+
+    return rows
