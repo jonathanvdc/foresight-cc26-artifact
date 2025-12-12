@@ -95,7 +95,7 @@ def run(
             "--limit-steps",
         ],
         cwd=baseline_dir,
-        stdout=None,
+        capture_stdout=False,
     )
 
     # Foresight: (1) optimize-only stencil2d across 1-8 threads.
@@ -112,7 +112,7 @@ def run(
             "stencil2d",
         ],
         cwd=foresight_dir,
-        stdout=None,
+        capture_stdout=False,
     )
 
     # Foresight: (2) full run at 1 thread (includes running kernels).
@@ -127,5 +127,5 @@ def run(
             "--foresight-thread-counts=1",
         ],
         cwd=foresight_dir,
-        stdout=None,
+        capture_stdout=False,
     )
