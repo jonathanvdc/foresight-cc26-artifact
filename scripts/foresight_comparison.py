@@ -68,40 +68,6 @@ def produce_measurements_csv(*, exp_out: Path) -> Path:
     return measurements_path
 
 
-def parse_measurements_csv_from_stdout(stdout: str) -> Tuple[List[str], List[List[str]]]:
-    """Parse the benchmark CSV printed to stdout.
-
-    Expects a header line and data lines like:
-      benchmark,slotted,egg,hegg,egglog,foresight_mut_t1,foresight_mut_t8
-      mm20,...
-
-    Returns (header, rows) as strings.
-    """
-    lines = [ln.strip() for ln in stdout.splitlines() if ln.strip()]
-    header_idx = None
-    for i, ln in enumerate(lines):
-        if ln.startswith("benchmark,"):
-            header_idx = i
-            break
-    if header_idx is None:
-        raise ValueError("could not find CSV header line starting with 'benchmark,' in stdout")
-
-    csv_lines = lines[header_idx:]
-    reader = csv.reader(csv_lines)
-
-    header = next(reader, None)
-    if header is None:
-        raise ValueError("missing CSV header")
-
-    rows: List[List[str]] = []
-    for row in reader:
-        if not row:
-            continue
-        rows.append(row)
-
-    return header, rows
-
-
 def normalize_kernel_name(raw: str) -> Optional[str]:
     """Rename benchmarks.
 
