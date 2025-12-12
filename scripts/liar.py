@@ -80,7 +80,7 @@ def run_experiments(
     ensure_dir(foresight_dir)
 
     # Path to the LIAR evaluation script.
-    eval_py = repo_root / "src" / "scripts" / "liar-evaluation" / "evaluate_all.py"
+    eval_py = (repo_root / "src" / "scripts" / "liar-evaluation" / "evaluate_all.py").resolve()
     if not eval_py.exists():
         raise FileNotFoundError(
             f"Could not find LIAR evaluation script at: {eval_py}\n"
