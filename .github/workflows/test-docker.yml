@@ -21,3 +21,4 @@ jobs:
             -e BENCH_SECONDS=5 \
             -e FORESIGHT_THREAD_COUNTS="1 2" \
             foresight-comparison
+          cat results/foresight-comparison/ratios.csv
