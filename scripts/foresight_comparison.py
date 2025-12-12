@@ -162,6 +162,7 @@ def make_ratios_chart(outdir: Path, ratio_rows: Sequence[Sequence[object]]) -> N
     ax.set_xticks(x)
     ax.set_xticklabels(kernels)
     ax.set_ylabel("Runtime relative to egg (lower is better)")
+    ax.set_yscale("log")
     ax.set_title("Foresight comparison (ratios)")
     ax.axhline(1.0, linewidth=1)
     ax.legend(ncol=min(3, len(series_names)), fontsize=9)
