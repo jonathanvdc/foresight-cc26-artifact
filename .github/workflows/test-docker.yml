@@ -1,0 +1,23 @@
+name: Test Docker Image
+
+on: push
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t foresight-evaluation -f Dockerfile .
+
+      - name: Run comparison experiments
+        run: |
+          mkdir -p results
+          docker run --rm -it \
+            --mount type=bind,src=./results,dst=/results \
+            -e BENCH_SECONDS=5 \
+            -e FORESIGHT_THREAD_COUNTS="1 2" \
+            foresight-comparison
