@@ -62,14 +62,6 @@ def produce_measurements_csv(*, exp_out: Path) -> Path:
     return measurements_path
 
 
-def _find_column(header: Sequence[str], candidates: Sequence[str]) -> Optional[int]:
-    idx: Dict[str, int] = {h: i for i, h in enumerate(header)}
-    for c in candidates:
-        if c in idx:
-            return idx[c]
-    return None
-
-
 def _infer_columns(header: Sequence[str]) -> Tuple[int, int, int]:
     """Infer (x, isolated, incremental) column indices from a header.
 
