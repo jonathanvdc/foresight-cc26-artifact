@@ -52,6 +52,7 @@ The experiments reproduce the performance comparison discussed in the paper.
 Currently included experiment groups:
 
 - `foresight-comparison`
+- `incremental-eqsat`
 
 ### `foresight-comparison`
 
