@@ -13,6 +13,9 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 from common import eprint, ensure_dir, run_cmd, write_csv, write_text
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 
 # -----------------------------
@@ -140,15 +143,6 @@ def make_ratios_chart(outdir: Path, ratio_rows: Sequence[Sequence[object]]) -> N
 
     Produces: <outdir>/ratios.png
     """
-    try:
-        import matplotlib
-
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-    except Exception as ex:  # pragma: no cover
-        eprint(f"[eval] warning: could not import matplotlib; skipping chart generation: {ex}")
-        return
-
     kernels = [str(r[0]) for r in ratio_rows]
     series_names = ["egglog", "hegg", "slotted", "foresight", "foresight8"]
     series_idx = [2, 3, 4, 5, 6]

@@ -7,11 +7,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     git \
-    openssh-client \
     ca-certificates \
     python3 \
     python3-pip \
     python3-psutil \
+    python3-matplotlib \
     pkg-config \
     libssl-dev \
     zlib1g-dev \
