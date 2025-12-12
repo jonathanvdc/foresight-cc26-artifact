@@ -46,6 +46,8 @@ def produce_measurements_csv(*, exp_out: Path) -> Path:
     repo_dir = Path("foresight-comparison")
     thread_args = foresight_threads.split()
 
+    measurements_path = exp_out / "measurements.csv"
+
     cmd = [
         "python3",
         "-u",
@@ -56,16 +58,11 @@ def produce_measurements_csv(*, exp_out: Path) -> Path:
         *thread_args,
         "--foresight-mutable-egraph",
         "true",
+        "--out",
+        str(measurements_path),
     ]
 
-    stdout = run_cmd(cmd, cwd=repo_dir)
-
-    write_text(exp_out / "stdout.txt", stdout)
-
-    header, rows = parse_measurements_csv_from_stdout(stdout)
-
-    measurements_path = exp_out / "measurements.csv"
-    write_csv(measurements_path, header, rows)
+    run_cmd(cmd, cwd=repo_dir, capture_stdout=False)
     eprint(f"[eval] wrote measurements: {measurements_path}")
 
     return measurements_path
