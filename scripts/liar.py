@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """LIAR experiment module.
 
-This module is designed to be imported by the artifact's top-level driver
-(e.g., scripts/eval.py). It only runs the LIAR experiments and stores their raw
-outputs in a stable directory layout.
-
 Outputs (relative to out_root):
   results/liar/
     baseline/
@@ -16,8 +12,6 @@ Baseline (cwd = results/liar/baseline):
 Foresight (cwd = results/liar/foresight):
   1) python3 ... --engine=foresight --foresight-thread-counts=1-8 stencil2d --optimize-only
   2) python3 ... --engine=foresight --foresight-thread-counts=1
-
-Aggregation/plotting is intentionally not handled here yet.
 """
 
 from __future__ import annotations
