@@ -75,9 +75,11 @@ def run_experiments(
     liar_dir = out_root / "results" / "liar"
     baseline_dir = liar_dir / "baseline"
     foresight_dir = liar_dir / "foresight"
+    foresight_parallel_dir = liar_dir / "foresight-parallel"
 
     ensure_dir(baseline_dir)
     ensure_dir(foresight_dir)
+    ensure_dir(foresight_parallel_dir)
 
     # Path to the LIAR evaluation script.
     eval_py = (repo_root / "src" / "scripts" / "liar-evaluation" / "evaluate_all.py").resolve()
@@ -121,7 +123,7 @@ def run_experiments(
             "--optimize-only",
             "stencil2d",
         ],
-        cwd=foresight_dir,
+        cwd=foresight_parallel_dir,
         capture_stdout=False,
     )
 
