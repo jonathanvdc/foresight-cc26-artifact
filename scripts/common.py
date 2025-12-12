@@ -38,7 +38,7 @@ def run_cmd(
         env=env,
         text=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=None, # forward stderr to parent process
         check=False,
     )
     if res.returncode != 0:
