@@ -4,7 +4,7 @@ This repository contains the evaluation artifact for the CC '26 paper:
 
 > **Parallel and Customizable Equality Saturation**
 
-The artifact is packaged as a **self-contained Docker image** that runs all experiments and produces the figures and tables reported in the paper.
+The artifact is packaged as a self-contained Docker image that runs all experiments and produces the figures and tables reported in the paper.
 
 ---
 
