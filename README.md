@@ -113,7 +113,6 @@ Each experiment writes its results to a subdirectory of `/results`:
 - `measurements.csv` – raw benchmark timings
 - `ratios.csv` – timings normalized to `egg`
 - `ratios.png` – bar chart used for visual comparison
-- `stdout.txt` – full captured stdout of the experiment script (for debugging/reproducibility)
 
 All CSV files are plain-text and suitable for inspection or re-plotting.
 
