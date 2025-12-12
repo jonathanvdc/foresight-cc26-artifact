@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     git \
+    openssh-client \
     ca-certificates \
     python3 \
     python3-pip \
@@ -81,16 +82,16 @@ ENV PATH="/root/.ghcup/bin:/root/.cabal/bin:/root/.cargo/bin:${PATH}"
 # Set Stack’s working directory
 ENV STACK_ROOT="/root/.stack"
 
+COPY . /workspace
+
 # Clone benchmark repositories
 RUN git clone --recursive https://github.com/jonathanvdc/foresight-comparison.git /workspace/foresight-comparison
 
-COPY . /workspace
-
 # (Optional) Pre-build benchmark projects
-RUN cd slotted && cargo build --release
-RUN cd egg && cargo build --release
-RUN cd hegg-bench && stack --system-ghc --no-install-ghc build
-RUN cd /workspace/foresight && sbt benchmarks/jmh:compile
+RUN cd /workspace/foresight-comparison/slotted && cargo build --release
+RUN cd /workspace/foresight-comparison/egg && cargo build --release
+RUN cd /workspace/foresight-comparison/hegg-bench && stack --system-ghc --no-install-ghc build
+RUN cd /workspace/foresight-comparison/foresight && sbt benchmarks/jmh:compile
 
 # # Default command: run benchmarks with --seconds from env variable, redirecting all output to stderr
 # CMD ["/bin/bash", "-lc", "python3 -u run_benchmarks.py --seconds \"${BENCH_SECONDS}\" --foresight-thread-counts ${FORESIGHT_THREAD_COUNTS} --foresight-mutable-egraph true 1>&2 && cat results.csv"]
