@@ -198,8 +198,8 @@ def _format_speedup_x(ratio: float) -> str:
     rounded = int(round(ratio))
     if rounded < 1:
         rounded = 1
-    if rounded > 10:
-        rounded = 10
+    # if rounded > 10:
+    #     rounded = 10
     return f"{rounded}x"
 
 
