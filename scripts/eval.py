@@ -26,7 +26,9 @@ from common import eprint, ensure_dir, run_cmd
 # -----------------------------
 # Experiment modules
 # -----------------------------
+
 from foresight_comparison import run_foresight_comparison
+from incremental_eqsat import run_incremental_eqsat
 
 
 # -----------------------------
@@ -46,9 +48,14 @@ EXPERIMENTS: Dict[str, Experiment] = {
             run_foresight_comparison(out_root=out_root)
         ),
     ),
+    "incremental-eqsat": Experiment(
+        name="incremental-eqsat",
+        run=lambda out_root: (
+            run_incremental_eqsat(out_root=out_root)
+        ),
+    ),
     # Future experiments can be registered here.
-    # "liar-reimplementation": Experiment(...),
-    # "egglog-extraction": Experiment(...),
+    # "liar-reimplementation": Experiment(...)
 }
 
 
