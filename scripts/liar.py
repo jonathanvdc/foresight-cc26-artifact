@@ -65,7 +65,16 @@ def run(
         timeout_seconds: Timeout for LIAR's optimizer (passed as -tNNN).
             Defaults to env var LIAR_TIMEOUT_SECONDS if set, else 300.
     """
+    run_experiments(out_root=out_root, repo_root=repo_root, timeout_seconds=timeout_seconds)
+    process_results(out_root=out_root)
 
+
+def run_experiments(
+    *,
+    out_root: Path,
+    repo_root: Path | None = None,
+    timeout_seconds: int | None = None,
+) -> None:
     repo_root = default_repo_root() if repo_root is None else repo_root
     timeout = _timeout_seconds(timeout_seconds)
 
@@ -131,7 +140,9 @@ def run(
         capture_stdout=False,
     )
 
-    # Reproduce Table 1 from the paper.
+
+def process_results(*, out_root: Path) -> None:
+    liar_dir = out_root / "results" / "liar"
     table1_path = liar_dir / "table-1.csv"
     table1_rows = compute_table1_rows(out_root=out_root)
     # Deterministic order.
