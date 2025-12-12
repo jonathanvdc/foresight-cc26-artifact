@@ -6,8 +6,10 @@ This script:
 - Writes each experiment's raw measurements into a subdirectory under --outdir.
 - Post-processes measurements into derived CSVs and charts.
 
-Currently implemented experiment groups:
+Implemented experiment groups:
 - foresight-comparison
+- incremental-eqsat
+- liar
 
 Other experiment groups can be added by extending EXPERIMENTS.
 """
@@ -29,6 +31,7 @@ from common import eprint, ensure_dir, run_cmd
 
 from foresight_comparison import run_foresight_comparison
 from incremental_eqsat import run_incremental_eqsat
+from liar import run as run_liar
 
 
 # -----------------------------
@@ -54,8 +57,12 @@ EXPERIMENTS: Dict[str, Experiment] = {
             run_incremental_eqsat(out_root=out_root)
         ),
     ),
-    # Future experiments can be registered here.
-    # "liar-reimplementation": Experiment(...)
+    "liar": Experiment(
+        name="liar",
+        run=lambda out_root: (
+            run_liar(out_root=out_root)
+        ),
+    )
 }
 
 
