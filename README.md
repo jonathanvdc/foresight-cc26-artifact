@@ -42,13 +42,12 @@ results/
     └── ratios.png
 ```
 
-The total runtime is on the order of a few minutes on a typical modern machine.
-
 ---
 
 ## What the Artifact Does
 
-The artifact evaluates **Foresight**, a parallel and customizable equality saturation engine, against several existing systems. The experiments reproduce the performance comparison discussed in the paper.
+The artifact evaluates **Foresight**, a parallel and customizable equality saturation engine, against several existing systems.
+The experiments reproduce the performance comparison discussed in the paper.
 
 Currently included experiment groups:
 
