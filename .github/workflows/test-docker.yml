@@ -21,11 +21,13 @@ jobs:
             --mount type=bind,src=./results,dst=/results \
             -e BENCH_SECONDS=5 \
             -e FORESIGHT_THREAD_COUNTS="1 2" \
+            foresight-evaluation \
             foresight-comparison
           cat results/foresight-comparison/ratios.csv
 
           docker run --rm \
             --mount type=bind,src=./results,dst=/results \
             -e BENCH_SECONDS=5 \
+            foresight-evaluation \
             incremental-eqsat
           cat results/incremental-eqsat/sat-times.csv
