@@ -22,17 +22,45 @@ import matplotlib.pyplot as plt
 # foresight-comparison logic
 # -----------------------------
 
-INPUT_HEADER = [
+BASE_INPUT_HEADER = [
     "benchmark",
     "slotted",
     "egg",
     "hegg",
     "egglog",
-    "foresight_mut_t1",
-    "foresight_mut_t8",
 ]
 
-OUTPUT_HEADER = ["Kernel", "egg", "egglog", "hegg", "slotted", "foresight", "foresight8"]
+BASE_OUTPUT_HEADER = ["Kernel", "egg", "egglog", "hegg", "slotted"]
+
+
+def parse_thread_counts(s: str) -> List[int]:
+    # Accept whitespace-separated integers. Preserve order of first occurrence.
+    out: List[int] = []
+    seen: set[int] = set()
+    for tok in s.split():
+        tok = tok.strip()
+        if not tok:
+            continue
+        t = int(tok)
+        if t not in seen:
+            seen.add(t)
+            out.append(t)
+    return out
+
+
+def foresight_col_for_thread(t: int) -> str:
+    return f"foresight_mut_t{t}"
+
+
+def threads_in_measurements_header(header: Sequence[str]) -> List[int]:
+    """Extract available Foresight thread counts from a measurements.csv header."""
+    threads: List[int] = []
+    for h in header:
+        m = re.fullmatch(r"foresight_mut_t(\d+)", h)
+        if m:
+            threads.append(int(m.group(1)))
+    threads.sort()
+    return threads
 
 
 def produce_measurements_csv(*, exp_out: Path) -> Path:
@@ -44,7 +72,7 @@ def produce_measurements_csv(*, exp_out: Path) -> Path:
     foresight_threads = os.environ.get("FORESIGHT_THREAD_COUNTS", "1 8")
 
     repo_dir = Path("foresight-comparison")
-    thread_args = foresight_threads.split()
+    thread_args = [str(t) for t in parse_thread_counts(foresight_threads)]
 
     measurements_path = exp_out / "measurements.csv"
 
@@ -89,13 +117,23 @@ def normalize_kernel_name(raw: str) -> Optional[str]:
 def compute_ratios_rows(
     header: Sequence[str],
     rows: Sequence[Sequence[str]],
-) -> List[List[object]]:
-    """Convert raw measurements into ratio rows divided by egg."""
-
+    *,
+    foresight_threads: Sequence[int],
+) -> Tuple[List[str], List[List[object]]]:
     idx: Dict[str, int] = {name: i for i, name in enumerate(header)}
-    missing = [c for c in INPUT_HEADER if c not in idx]
-    if missing:
-        raise ValueError(f"missing expected columns in measurements: {missing}; got header={list(header)}")
+
+    missing_base = [c for c in BASE_INPUT_HEADER if c not in idx]
+    if missing_base:
+        raise ValueError(f"missing expected base columns in measurements: {missing_base}; got header={list(header)}")
+
+    foresight_cols: List[str] = [foresight_col_for_thread(t) for t in foresight_threads]
+    missing_foresight = [c for c in foresight_cols if c not in idx]
+    if missing_foresight:
+        raise ValueError(
+            f"missing expected foresight thread columns in measurements: {missing_foresight}; got header={list(header)}"
+        )
+
+    out_header = BASE_OUTPUT_HEADER + [f"foresight_t{t}" for t in foresight_threads]
 
     out_rows: List[List[object]] = []
     for r in rows:
@@ -111,19 +149,20 @@ def compute_ratios_rows(
         if egg == 0.0:
             raise ValueError(f"egg runtime is 0 for benchmark {bench}, cannot divide")
 
-        out_rows.append(
-            [
-                kernel,
-                1.0,  # egg/egg
-                f("egglog") / egg,
-                f("hegg") / egg,
-                f("slotted") / egg,
-                f("foresight_mut_t1") / egg,
-                f("foresight_mut_t8") / egg,
-            ]
-        )
+        row_out: List[object] = [
+            kernel,
+            1.0,  # egg/egg
+            f("egglog") / egg,
+            f("hegg") / egg,
+            f("slotted") / egg,
+        ]
 
-    return out_rows
+        for c in foresight_cols:
+            row_out.append(f(c) / egg)
+
+        out_rows.append(row_out)
+
+    return out_header, out_rows
 
 
 def format_ratio_cell(x: object) -> object:
@@ -132,23 +171,60 @@ def format_ratio_cell(x: object) -> object:
     return x
 
 
-def write_ratios_csv(path: Path, ratio_rows: Sequence[Sequence[object]]) -> None:
+def write_ratios_csv(path: Path, header: Sequence[str], ratio_rows: Sequence[Sequence[object]]) -> None:
     formatted = [[format_ratio_cell(x) for x in row] for row in ratio_rows]
-    write_csv(path, OUTPUT_HEADER, formatted)
+    write_csv(path, list(header), formatted)
 
 
-def make_ratios_chart(outdir: Path, ratio_rows: Sequence[Sequence[object]]) -> None:
+def make_ratios_chart(outdir: Path, header: Sequence[str], ratio_rows: Sequence[Sequence[object]]) -> None:
     """Generate a simple grouped-bar chart from ratios.csv.
 
     Produces: <outdir>/ratios.png
     """
     kernels = [str(r[0]) for r in ratio_rows]
-    series_names = ["egglog", "hegg", "slotted", "foresight", "foresight8"]
-    series_idx = [2, 3, 4, 5, 6]
 
-    values: List[List[float]] = []
-    for si in series_idx:
-        values.append([float(r[si]) for r in ratio_rows])
+    # Base series (omit egg because it's always 1.0)
+    base_series = [
+        ("egglog", 2),
+        ("hegg", 3),
+        ("slotted", 4),
+    ]
+
+    # Foresight series are any columns in the output header that start with "foresight_t".
+    foresight_cols: List[Tuple[str, int]] = []
+    for i, name in enumerate(header):
+        if name.startswith("foresight_t"):
+            foresight_cols.append((name, i))
+
+    # Nicer legend names:
+    # - If exactly {1, X}, call them Sequential/Parallel.
+    # - Otherwise: Sequential for t=1, and "Foresight (<t> threads)" for others.
+    fs_threads: List[int] = []
+    for name, _ in foresight_cols:
+        m = re.fullmatch(r"foresight_t(\d+)", name)
+        if m:
+            fs_threads.append(int(m.group(1)))
+    fs_threads_sorted = sorted(fs_threads)
+    two_way = (len(fs_threads_sorted) == 2 and 1 in fs_threads_sorted)
+    parallel_t = max(fs_threads_sorted) if fs_threads_sorted else None
+
+    series: List[Tuple[str, int]] = []
+    series.extend(base_series)
+    for name, idx_col in foresight_cols:
+        m = re.fullmatch(r"foresight_t(\d+)", name)
+        t = int(m.group(1)) if m else None
+        if t == 1:
+            label = "Foresight (Sequential)"
+        elif two_way and t == parallel_t:
+            label = "Foresight (Parallel)"
+        elif t is not None:
+            label = f"Foresight ({t} threads)"
+        else:
+            label = name
+        series.append((label, idx_col))
+
+    series_names = [n for (n, _) in series]
+    series_idx = [i for (_, i) in series]
 
     import numpy as np
 
@@ -156,7 +232,7 @@ def make_ratios_chart(outdir: Path, ratio_rows: Sequence[Sequence[object]]) -> N
     width = 0.14
 
     fig, ax = plt.subplots(figsize=(max(7.0, 1.4 * len(kernels)), 4.2))
-    for i, (name, vals) in enumerate(zip(series_names, values)):
+    for i, (name, vals) in enumerate(zip(series_names, [[float(r[j]) for r in ratio_rows] for j in series_idx])):
         ax.bar(x + (i - (len(series_names) - 1) / 2) * width, vals, width, label=name)
 
     ax.set_xticks(x)
@@ -178,12 +254,15 @@ def process_measurements_csv(*, exp_out: Path, measurements_path: Path) -> None:
     """Process an existing measurements.csv into ratios.csv and ratios.png."""
     header, rows = read_csv(measurements_path)
 
-    ratio_rows = compute_ratios_rows(header, rows)
+    # Determine which thread counts are available in the file.
+    fs_threads_in_file = threads_in_measurements_header(header)
+
+    out_header, ratio_rows = compute_ratios_rows(header, rows, foresight_threads=fs_threads_in_file)
     ratios_path = exp_out / "ratios.csv"
-    write_ratios_csv(ratios_path, ratio_rows)
+    write_ratios_csv(ratios_path, out_header, ratio_rows)
     eprint(f"[eval] wrote ratios: {ratios_path}")
 
-    make_ratios_chart(exp_out, ratio_rows)
+    make_ratios_chart(exp_out, out_header, ratio_rows)
 
 
 def run_foresight_comparison(*, out_root: Path) -> None:
@@ -198,7 +277,19 @@ def run_foresight_comparison(*, out_root: Path) -> None:
     force_rerun = os.environ.get("FORCE_RERUN", "0") not in ("0", "false", "False", "")
 
     if (not force_rerun) and measurements_path.exists():
-        eprint(f"[eval] reusing existing measurements: {measurements_path}")
+        file_header, _ = read_csv(measurements_path)
+        existing_threads = set(threads_in_measurements_header(file_header))
+
+        requested_threads = set(parse_thread_counts(os.environ.get("FORESIGHT_THREAD_COUNTS", "1 8")))
+
+        if existing_threads.issubset(requested_threads):
+            eprint(f"[eval] reusing existing measurements: {measurements_path}")
+        else:
+            eprint(
+                "[eval] existing measurements thread counts do not match requested; "
+                f"existing={sorted(existing_threads)} requested={sorted(requested_threads)}; rerunning"
+            )
+            measurements_path = produce_measurements_csv(exp_out=exp_out)
     else:
         measurements_path = produce_measurements_csv(exp_out=exp_out)
 
