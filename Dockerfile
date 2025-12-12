@@ -94,6 +94,12 @@ RUN cd /workspace/foresight-comparison/egg && cargo build --release
 RUN cd /workspace/foresight-comparison/hegg-bench && stack --system-ghc --no-install-ghc build
 RUN cd /workspace/foresight-comparison/foresight && sbt benchmarks/jmh:compile
 
+# Clone incremental eqsat repository
+RUN git clone --recursive https://github.com/jonathanvdc/incremental-eqsat-evaluation.git /workspace/incremental-eqsat
+
+# Pre-build incremental eqsat project
+RUN cd /workspace/incremental-eqsat/foresight && sbt benchmarks/jmh:compile
+
 COPY scripts /workspace/scripts
 
 # # Default command: run benchmarks with --seconds from env variable, redirecting all output to stderr
