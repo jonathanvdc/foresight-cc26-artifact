@@ -94,7 +94,7 @@ RUN cd /workspace/foresight-comparison/egg && cargo build --release
 RUN cd /workspace/foresight-comparison/hegg-bench && stack --system-ghc --no-install-ghc build
 RUN cd /workspace/foresight-comparison/foresight && sbt benchmarks/jmh:compile
 
-COPY eval.py /workspace/eval.py
+COPY scripts /workspace/scripts
 
 # # Default command: run benchmarks with --seconds from env variable, redirecting all output to stderr
-# CMD ["/bin/bash", "-lc", "python3 -u run_benchmarks.py --seconds \"${BENCH_SECONDS}\" --foresight-thread-counts ${FORESIGHT_THREAD_COUNTS} --foresight-mutable-egraph true 1>&2 && cat results.csv"]
+CMD ["/bin/bash", "-lc", "python3 scripts/eval.py"]
