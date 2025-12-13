@@ -153,7 +153,7 @@ def process_results(*, out_root: Path) -> None:
     with table1_path.open("w", newline="") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["kernel", "liar_solution", "intuition_solution", "sp"],
+            fieldnames=["kernel", "liar_solution", "intuition_solution", "speedup"],
         )
         writer.writeheader()
         writer.writerows(table1_rows)
@@ -210,7 +210,7 @@ def compute_table1_rows(*, out_root: Path) -> list[dict[str, str]]:
       - kernel
       - liar_solution
       - intuition_solution
-      - sp
+      - speedup
 
     Selection rule:
       Include kernels where the `externs` field differs between baseline and
@@ -261,7 +261,7 @@ def compute_table1_rows(*, out_root: Path) -> list[dict[str, str]]:
                 "kernel": k,
                 "liar_solution": base_externs,
                 "intuition_solution": fore_externs,
-                "sp": sp,
+                "speedup": sp,
             }
         )
 
