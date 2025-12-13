@@ -72,7 +72,7 @@ def run_experiments(
     repo_root = default_repo_root() if repo_root is None else repo_root
     timeout = _timeout_seconds(timeout_seconds)
 
-    liar_dir = out_root / "results" / "liar"
+    liar_dir = out_root / "liar"
     baseline_dir = liar_dir / "baseline"
     foresight_dir = liar_dir / "foresight"
     foresight_parallel_dir = liar_dir / "foresight-parallel"
@@ -144,7 +144,7 @@ def run_experiments(
 
 
 def process_results(*, out_root: Path) -> None:
-    liar_dir = out_root / "results" / "liar"
+    liar_dir = out_root / "liar"
     table1_path = liar_dir / "table-1.csv"
     table1_rows = compute_table1_rows(out_root=out_root)
     # Deterministic order.
@@ -221,8 +221,8 @@ def compute_table1_rows(*, out_root: Path) -> list[dict[str, str]]:
       formatted as 1x.. (clamped).
     """
 
-    base_plots = out_root / "results" / "liar" / "baseline" / "plots"
-    fore_plots = out_root / "results" / "liar" / "foresight" / "plots"
+    base_plots = out_root / "liar" / "baseline" / "plots"
+    fore_plots = out_root / "liar" / "foresight" / "plots"
 
     base_overview = _read_csv_by_key(base_plots / "blas-overview.csv", "name")
     fore_overview = _read_csv_by_key(fore_plots / "blas-overview.csv", "name")
