@@ -54,6 +54,28 @@ results/
         improved-benchmarks.csv
 ```
 
+## Mapping to Paper Figures and Tables
+
+The artifact produces CSV files and plots that directly correspond to the tables and figures in the paper:
+
+- **Table 1** → `liar/tables/improved-benchmarks.csv`  
+  Benchmarks where Foresight strictly improves over the baseline.
+
+- **Figure 6** → `foresight-comparison/ratios.png`  
+  Normalized runtime comparison across equality saturation engines.
+
+- **Figure 7** → `liar/plots/saturation-speedups.png`  
+  Speedups from saturation optimizations relative to the LIAR baseline.
+
+- **Figure 8** → `liar/plots/parallelism-speedups-stencil2d.png`  
+  Parallel scalability of Foresight on the `stencil2d` benchmark.
+
+- **Figure 9** → `liar/plots/solution-speedups.png`  
+  End-to-end solution quality speedups.
+
+- **Figure 10** → `incremental-eqsat/sat-times.png`  
+  Saturation time comparison for incremental equality saturation.
+
 ---
 
 ## What the Artifact Does
