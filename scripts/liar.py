@@ -10,6 +10,8 @@ Outputs (relative to out_root):
       saturation-speedups.png
       parallelism-speedups-stencil2d.csv
       parallelism-speedups-stencil2d.png
+      solution-speedups.csv
+      solution-speedups.png
 
 Baseline (cwd = results/liar/baseline):
   python3 liar/src/scripts/liar-evaluation/evaluate_all.py -t300 --limit-steps
@@ -212,6 +214,31 @@ def process_results(*, out_root: Path) -> None:
 
     eprint(f"[{EXPERIMENT_NAME}] Copied parallelism speedups CSV to: {par_csv_path}")
     eprint(f"[{EXPERIMENT_NAME}] Wrote parallelism speedups plot to: {par_png_path}")
+
+    # -----------------
+    # Figure 9-style runtime speedups across Intuition solutions.
+    sol_csv_path = plots_dir / "solution-speedups.csv"
+    sol_png_path = plots_dir / "solution-speedups.png"
+
+    sol_rows = compute_solution_speedup_rows(out_root=out_root)
+
+    with sol_csv_path.open("w", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "kernel",
+                "classic_eqsat_speedup",
+                "isaria_speedup",
+                "sympy_speedup",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(sol_rows)
+
+    write_solution_speedups_bar_chart(rows=sol_rows, out_path=sol_png_path)
+
+    eprint(f"[{EXPERIMENT_NAME}] Wrote solution speedups CSV to: {sol_csv_path}")
+    eprint(f"[{EXPERIMENT_NAME}] Wrote solution speedups plot to: {sol_png_path}")
 
 
 # Helper functions to reproduce Table 1 from the paper.
@@ -555,6 +582,184 @@ def write_parallelism_speedups_plot(*, in_path: Path, out_path: Path) -> None:
     ax.legend(loc="upper left", fontsize=8)
     ax.grid(True, which="both", linestyle=":", linewidth=0.5)
 
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path)
+    plt.close(fig)
+
+def compute_solution_speedup_rows(*, out_root: Path) -> list[dict[str, str]]:
+    """Compute Figure 9-style speedups for multiple Intuition solutions.
+
+    Bars are computed the same way as `compute_table1_rows`, except we also
+    pull `blas.isaria.1` and `blas.sympy.1` from the *foresight* speedups CSV.
+
+    All three series are normalized to baseline `blas.simple.1`:
+      classic_eqsat = foresight['blas.simple.1'] / baseline['blas.simple.1']
+      isaria        = foresight['blas.isaria.1'] / baseline['blas.simple.1']
+      sympy         = foresight['blas.sympy.1']  / baseline['blas.simple.1']
+
+    Selection rule:
+      Same as `compute_table1_rows`: include kernels where `externs` differs
+      between baseline and foresight in `blas-overview.csv`.
+
+    A synthetic `geomean` row is appended (per-series geometric mean).
+    """
+
+    base_plots = out_root / "liar" / "baseline" / "plots"
+    fore_plots = out_root / "liar" / "foresight" / "plots"
+
+    base_overview = _read_csv_by_key(base_plots / "blas-overview.csv", "name")
+    fore_overview = _read_csv_by_key(fore_plots / "blas-overview.csv", "name")
+
+    base_speedups = _read_csv_by_key(base_plots / "speedups.csv", "benchmark")
+    fore_speedups = _read_csv_by_key(fore_plots / "speedups.csv", "benchmark")
+
+    # Deterministic kernel order.
+    common_kernels = sorted(set(base_overview.keys()) & set(fore_overview.keys()))
+
+    rows: list[dict[str, str]] = []
+    classic_vals: list[float] = []
+    isaria_vals: list[float] = []
+    sympy_vals: list[float] = []
+
+    for k in common_kernels:
+        base_externs = (base_overview[k].get("externs") or "").strip()
+        fore_externs = (fore_overview[k].get("externs") or "").strip()
+        if base_externs == fore_externs:
+            continue
+
+        if k not in base_speedups or k not in fore_speedups:
+            continue
+
+        base_ref_s = base_speedups[k].get("blas.simple.1")
+        if base_ref_s is None:
+            continue
+        base_ref = _parse_float(base_ref_s, ctx=f"baseline blas.simple.1 for {k}")
+        if base_ref <= 0.0:
+            continue
+
+        def _maybe_ratio(col: str) -> float | None:
+            v = fore_speedups[k].get(col)
+            if v is None or (str(v).strip() == ""):
+                return None
+            fv = _parse_float(v, ctx=f"foresight {col} for {k}")
+            return fv / base_ref
+
+        classic = _maybe_ratio("blas.simple.1")
+        isaria = _maybe_ratio("blas.isaria.1")
+        sympy = _maybe_ratio("blas.sympy.1")
+
+        # If classic is missing, skip the row (can't anchor the plot).
+        if classic is None:
+            continue
+
+        # Record for geomean (only if present and positive).
+        if classic is not None and classic > 0.0:
+            classic_vals.append(classic)
+        if isaria is not None and isaria > 0.0:
+            isaria_vals.append(isaria)
+        if sympy is not None and sympy > 0.0:
+            sympy_vals.append(sympy)
+
+        rows.append(
+            {
+                "kernel": k,
+                "classic_eqsat_speedup": f"{classic:.6g}",
+                "isaria_speedup": "" if isaria is None else f"{isaria:.6g}",
+                "sympy_speedup": "" if sympy is None else f"{sympy:.6g}",
+            }
+        )
+
+    # Append per-series geomean.
+    rows.append(
+        {
+            "kernel": "geomean",
+            "classic_eqsat_speedup": f"{_geometric_mean(classic_vals):.6g}",
+            "isaria_speedup": f"{_geometric_mean(isaria_vals):.6g}" if isaria_vals else "",
+            "sympy_speedup": f"{_geometric_mean(sympy_vals):.6g}" if sympy_vals else "",
+        }
+    )
+
+    return rows
+
+
+def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: Path) -> None:
+    """Write a grouped bar chart for classic/isaria/sympy speedups (Figure 9 style)."""
+
+    kernels: list[str] = []
+    classic: list[float] = []
+    isaria: list[float] = []
+    sympy: list[float] = []
+
+    def _f(s: str) -> float | None:
+        s = (s or "").strip()
+        if not s:
+            return None
+        try:
+            return float(s)
+        except ValueError:
+            return None
+
+    for r in rows:
+        k = (r.get("kernel") or "").strip()
+        if not k:
+            continue
+        c = _f(r.get("classic_eqsat_speedup") or "")
+        if c is None:
+            continue
+        kernels.append(k)
+        classic.append(c)
+        isaria.append(_f(r.get("isaria_speedup") or "") or float("nan"))
+        sympy.append(_f(r.get("sympy_speedup") or "") or float("nan"))
+
+    if not kernels:
+        raise ValueError("No solution speedup data to plot")
+
+    n = len(kernels)
+    x = list(range(n))
+    w = 0.22
+
+    fig, ax = plt.subplots(figsize=(10.0, 2.8), dpi=150)
+
+    b1 = ax.bar([xi - w for xi in x], classic, width=w, edgecolor="black", linewidth=0.6, label="Classic EqSat")
+    b2 = ax.bar(x, isaria, width=w, edgecolor="black", linewidth=0.6, label="Isaria")
+    b3 = ax.bar([xi + w for xi in x], sympy, width=w, edgecolor="black", linewidth=0.6, label="SymPy")
+
+    ax.set_yscale("log")
+    ax.set_ylabel("Speedup")
+    ax.set_xticks(x)
+    ax.set_xticklabels(kernels, rotation=45, ha="right")
+    ax.axhline(1.0, linewidth=0.8)
+
+    # Choose a reasonable y-range based on finite values.
+    finite_vals: list[float] = []
+    for arr in (classic, isaria, sympy):
+        for v in arr:
+            if v == v and v not in (float("inf"), float("-inf")) and v > 0.0:
+                finite_vals.append(v)
+    if finite_vals:
+        ymin = min(finite_vals)
+        ymax = max(finite_vals)
+        ax.set_ylim(max(1e-4, ymin / 3.0), ymax * 3.0)
+
+    def _annotate(bars):
+        for bar in bars:
+            h = bar.get_height()
+            if h != h or h <= 0.0 or h in (float("inf"), float("-inf")):
+                continue
+            xc = bar.get_x() + bar.get_width() / 2.0
+            if h >= 1.0:
+                txt = f"{h:.1f}" if h < 100 else f"{h:.0f}"
+                ax.text(xc, h * 1.08, txt, ha="center", va="bottom", fontsize=7)
+            else:
+                txt = f"{h:.5g}"
+                ax.text(xc, h / 1.25, txt, ha="center", va="top", fontsize=7)
+
+    _annotate(b1)
+    _annotate(b2)
+    _annotate(b3)
+
+    ax.legend(loc="upper right", fontsize=8)
     fig.tight_layout()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path)
