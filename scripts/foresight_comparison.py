@@ -69,6 +69,7 @@ def produce_measurements_csv(*, exp_out: Path) -> Path:
     Returns the path to the generated measurements CSV.
     """
     bench_seconds = os.environ.get("BENCH_SECONDS", "60")
+    jmh_jvm_ram = os.environ.get("JMH_JVM_RAM", "16g")
     foresight_threads = os.environ.get("FORESIGHT_THREAD_COUNTS", "1 8")
 
     repo_dir = Path("foresight-comparison")
@@ -86,6 +87,7 @@ def produce_measurements_csv(*, exp_out: Path) -> Path:
         *thread_args,
         "--foresight-mutable-egraph",
         "true",
+        f"--jmh-jvm-opts=-Xmx{jmh_jvm_ram}",
         "--out",
         str(measurements_path),
     ]

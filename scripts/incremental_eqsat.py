@@ -36,6 +36,7 @@ def produce_measurements_csv(*, exp_out: Path) -> Path:
     """
 
     bench_seconds = os.environ.get("BENCH_SECONDS", "60")
+    jmh_jvm_ram = os.environ.get("JMH_JVM_RAM", "16g")
 
     # The harness expects --size <values...>. We allow TERM_COUNTS to contain
     # either space-separated values ("100 200 300") or a single value.
@@ -53,6 +54,7 @@ def produce_measurements_csv(*, exp_out: Path) -> Path:
         bench_seconds,
         "--size",
         *size_args,
+        f"--jmh-jvm-opts=-Xmx{jmh_jvm_ram}",
         "--out",
         str(measurements_path),
     ]
