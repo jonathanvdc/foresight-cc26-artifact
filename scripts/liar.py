@@ -600,10 +600,6 @@ def compute_solution_speedup_rows(*, out_root: Path) -> list[dict[str, str]]:
       isaria        = foresight['blas.isaria.1'] / baseline['blas.simple.1']
       sympy         = foresight['blas.sympy.1']  / baseline['blas.simple.1']
 
-    Selection rule:
-      Same as `compute_table1_rows`: include kernels where `externs` differs
-      between baseline and foresight in `blas-overview.csv`.
-
     A synthetic `geomean` row is appended (per-series geometric mean).
     """
 
@@ -625,11 +621,6 @@ def compute_solution_speedup_rows(*, out_root: Path) -> list[dict[str, str]]:
     sympy_vals: list[float] = []
 
     for k in common_kernels:
-        base_externs = (base_overview[k].get("externs") or "").strip()
-        fore_externs = (fore_overview[k].get("externs") or "").strip()
-        if base_externs == fore_externs:
-            continue
-
         if k not in base_speedups or k not in fore_speedups:
             continue
 
