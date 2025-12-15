@@ -8,6 +8,8 @@ Outputs (relative to out_root):
     plots/
       saturation-speedups.csv
       saturation-speedups.png
+      parallelism-speedups-stencil2d.csv
+      parallelism-speedups-stencil2d.png
 
 Baseline (cwd = results/liar/baseline):
   python3 liar/src/scripts/liar-evaluation/evaluate_all.py -t300 --limit-steps
@@ -21,6 +23,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import shutil
 
 from common import eprint, ensure_dir, run_cmd
 import csv
@@ -194,6 +197,21 @@ def process_results(*, out_root: Path) -> None:
 
     eprint(f"[{EXPERIMENT_NAME}] Wrote saturation speedups CSV to: {sat_csv_path}")
     eprint(f"[{EXPERIMENT_NAME}] Wrote saturation speedups bar chart to: {sat_png_path}")
+
+    # -----------------
+    # Parallelism speedups (stencil2d components) plot + backing CSV copy.
+    par_src = out_root / "liar" / "foresight" / "plots" / "parallelism-speedups-stencil2d.csv"
+    par_csv_path = plots_dir / "parallelism-speedups-stencil2d.csv"
+    par_png_path = plots_dir / "parallelism-speedups-stencil2d.png"
+
+    if not par_src.exists():
+        raise FileNotFoundError(f"Missing parallelism speedups CSV: {par_src}")
+
+    shutil.copyfile(par_src, par_csv_path)
+    write_parallelism_speedups_plot(in_path=par_csv_path, out_path=par_png_path)
+
+    eprint(f"[{EXPERIMENT_NAME}] Copied parallelism speedups CSV to: {par_csv_path}")
+    eprint(f"[{EXPERIMENT_NAME}] Wrote parallelism speedups plot to: {par_png_path}")
 
 
 # Helper functions to reproduce Table 1 from the paper.
@@ -435,6 +453,107 @@ def write_saturation_speedups_bar_chart(*, rows: list[dict[str, str]], out_path:
     for i, sp in enumerate(speedups):
         label = f"{sp:.0f}" if sp >= 10.0 else f"{sp:.2f}"
         ax.text(i, sp, label, ha="center", va="bottom", fontsize=8)
+
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path)
+    plt.close(fig)
+
+
+def write_parallelism_speedups_plot(*, in_path: Path, out_path: Path) -> None:
+    """Plot parallel speedups across components from LIAR's stencil2d run.
+
+    Input CSV schema (columns used):
+      - threads
+      - total saturation speedup
+      - add nodes speedup
+      - union speedup
+      - metadata for new nodes speedup
+      - metadata unification speedup
+      - rule application speedup
+      - rule matching speedup
+
+    The plot uses a log-scaled y-axis, similar to the paper figure.
+    """
+
+    if not in_path.exists():
+        raise FileNotFoundError(f"Missing CSV: {in_path}")
+
+    # Read.
+    threads: list[int] = []
+    series: dict[str, list[float]] = {
+        "Total Saturation": [],
+        "E-Node Insertions": [],
+        "E-Class Unions": [],
+        "E-Node Metadata": [],
+        "Metadata Unions": [],
+        "E-Matching": [],
+        "Command Generation": [],
+    }
+
+    with in_path.open("r", newline="") as f:
+        r = csv.DictReader(f)
+        required = [
+            "threads",
+            "total saturation speedup",
+            "add nodes speedup",
+            "union speedup",
+            "metadata for new nodes speedup",
+            "metadata unification speedup",
+            "rule application speedup",
+            "rule matching speedup",
+        ]
+        if r.fieldnames is None:
+            raise ValueError(f"CSV {in_path} has no header")
+        missing = [c for c in required if c not in r.fieldnames]
+        if missing:
+            raise ValueError(f"CSV {in_path} missing required columns: {missing}")
+
+        for row in r:
+            t = int(_parse_float(row["threads"], ctx="threads"))
+            threads.append(t)
+
+            series["Total Saturation"].append(
+                _parse_float(row["total saturation speedup"], ctx="total saturation speedup")
+            )
+            series["E-Node Insertions"].append(
+                _parse_float(row["add nodes speedup"], ctx="add nodes speedup")
+            )
+            series["E-Class Unions"].append(
+                _parse_float(row["union speedup"], ctx="union speedup")
+            )
+            series["E-Node Metadata"].append(
+                _parse_float(row["metadata for new nodes speedup"], ctx="metadata for new nodes speedup")
+            )
+            series["Metadata Unions"].append(
+                _parse_float(
+                    row["metadata unification speedup"],
+                    ctx="metadata unification speedup",
+                )
+            )
+            series["Command Generation"].append(
+                _parse_float(row["rule application speedup"], ctx="rule application speedup")
+            )
+            series["E-Matching"].append(
+                _parse_float(row["rule matching speedup"], ctx="rule matching speedup")
+            )
+
+    if not threads:
+        raise ValueError(f"No data rows in CSV: {in_path}")
+
+    # Plot.
+    fig, ax = plt.subplots(figsize=(6.0, 4.0), dpi=150)
+
+    for label, ys in series.items():
+        ax.plot(threads, ys, marker="o", linewidth=1.2, markersize=3, label=label)
+
+    ax.set_xlabel("Number of Threads")
+    ax.set_ylabel("Speedup (log scale)")
+    ax.set_yscale("log")
+    ax.set_xticks(threads)
+
+    ax.legend(loc="upper left", fontsize=8)
+    ax.grid(True, which="both", linestyle=":", linewidth=0.5)
 
     fig.tight_layout()
     out_path.parent.mkdir(parents=True, exist_ok=True)
