@@ -170,7 +170,7 @@ def process_results(*, out_root: Path) -> None:
     with table1_path.open("w", newline="") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["kernel", "liar_solution", "intuition_solution", "speedup"],
+            fieldnames=["kernel", "liar_solution", "foresight_solution", "speedup"],
         )
         writer.writeheader()
         writer.writerows(table1_rows)
@@ -216,7 +216,7 @@ def process_results(*, out_root: Path) -> None:
     eprint(f"[{EXPERIMENT_NAME}] Wrote parallelism speedups plot to: {par_png_path}")
 
     # -----------------
-    # Figure 9-style runtime speedups across Intuition solutions.
+    # Figure 9-style runtime speedups across Foresight solutions.
     sol_csv_path = plots_dir / "solution-speedups.csv"
     sol_png_path = plots_dir / "solution-speedups.png"
 
@@ -279,12 +279,12 @@ def _format_speedup_x(ratio: float) -> str:
 
 
 def compute_table1_rows(*, out_root: Path) -> list[dict[str, str]]:
-    """Compute the rows for Table 1 (BLAS idioms where Intuition beats LIAR).
+    """Compute the rows for Table 1 (BLAS idioms where Foresight beats LIAR).
 
     Returns a list of dicts with keys:
       - kernel
       - liar_solution
-      - intuition_solution
+      - foresight_solution
       - speedup
 
     Selection rule:
@@ -335,7 +335,7 @@ def compute_table1_rows(*, out_root: Path) -> list[dict[str, str]]:
             {
                 "kernel": k,
                 "liar_solution": base_externs,
-                "intuition_solution": fore_externs,
+                "foresight_solution": fore_externs,
                 "speedup": sp,
             }
         )
@@ -588,7 +588,7 @@ def write_parallelism_speedups_plot(*, in_path: Path, out_path: Path) -> None:
     plt.close(fig)
 
 def compute_solution_speedup_rows(*, out_root: Path) -> list[dict[str, str]]:
-    """Compute Figure 9-style speedups for multiple Intuition solutions.
+    """Compute Figure 9-style speedups for multiple Foresight solutions.
 
     Bars are computed the same way as `compute_table1_rows`, except we also
     pull `blas.isaria.1` and `blas.sympy.1` from the *foresight* speedups CSV.
