@@ -190,17 +190,12 @@ def _parse_float(value: str, *, ctx: str) -> float:
 def _format_speedup_x(ratio: float) -> str:
     """Format the Table 1 speedup column.
 
-    The paper reports Sp. in the range 1x.. We clamp and round to the
-    nearest integer.
+    The paper reports Sp. in the range 1x.. We round to two
+    decimal places.
     """
     if ratio != ratio or ratio == float("inf") or ratio == float("-inf"):
         return "?x"
-    rounded = int(round(ratio))
-    if rounded < 1:
-        rounded = 1
-    # if rounded > 10:
-    #     rounded = 10
-    return f"{rounded}x"
+    return f"{ratio:.2f}x"
 
 
 def compute_table1_rows(*, out_root: Path) -> list[dict[str, str]]:
