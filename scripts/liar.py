@@ -12,6 +12,8 @@ Outputs (relative to out_root):
       parallelism-speedups-stencil2d.png
       solution-speedups.csv
       solution-speedups.png
+    tables/
+      improved-benchmarks.csv
 
 Baseline (cwd = results/liar/baseline):
   python3 liar/src/scripts/liar-evaluation/evaluate_all.py -t300 --limit-steps
