@@ -204,7 +204,7 @@ def process_results(*, out_root: Path) -> None:
 
     # -----------------
     # Parallelism speedups (stencil2d components) plot + backing CSV copy.
-    par_src = out_root / "liar" / "foresight" / "plots" / "parallelism-speedups-stencil2d.csv"
+    par_src = out_root / "liar" / "foresight-parallel" / "plots" / "parallelism-speedups-stencil2d.csv"
     par_csv_path = plots_dir / "parallelism-speedups-stencil2d.csv"
     par_png_path = plots_dir / "parallelism-speedups-stencil2d.png"
 
