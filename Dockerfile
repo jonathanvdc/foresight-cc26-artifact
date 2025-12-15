@@ -87,8 +87,11 @@ ENV STACK_ROOT="/root/.stack"
 # Create workspace directory
 RUN mkdir -p /workspace
 
-# Clone Foresight comparison repository
-RUN git clone --recursive https://github.com/jonathanvdc/foresight-comparison.git /workspace/foresight-comparison
+# Clone Foresight comparison repository (pinned to specific commit)
+RUN git clone https://github.com/jonathanvdc/foresight-comparison.git /workspace/foresight-comparison \
+ && cd /workspace/foresight-comparison \
+ && git checkout ccec8a511848a3a523417d5c45888b4b46f52be8 \
+ && git submodule update --init --recursive
 
 # (Optional) Pre-build Foresight comparison benchmark projects
 RUN cd /workspace/foresight-comparison/slotted && cargo build --release
