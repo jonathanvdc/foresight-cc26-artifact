@@ -5,6 +5,9 @@ Outputs (relative to out_root):
   liar/
     baseline/
     foresight/
+    plots/
+      saturation-speedups.csv
+      saturation-speedups.png
 
 Baseline (cwd = results/liar/baseline):
   python3 liar/src/scripts/liar-evaluation/evaluate_all.py -t300 --limit-steps
@@ -21,6 +24,10 @@ from pathlib import Path
 
 from common import eprint, ensure_dir, run_cmd
 import csv
+import math
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 
 EXPERIMENT_NAME = "liar"
@@ -145,6 +152,9 @@ def run_experiments(
 
 def process_results(*, out_root: Path) -> None:
     liar_dir = out_root / "liar"
+
+    # -----------------
+    # Table 1 (paper).
     table1_path = liar_dir / "table-1.csv"
     table1_rows = compute_table1_rows(out_root=out_root)
     # Deterministic order.
@@ -159,6 +169,29 @@ def process_results(*, out_root: Path) -> None:
         writer.writerows(table1_rows)
 
     eprint(f"[{EXPERIMENT_NAME}] Wrote Table 1 to: {table1_path}")
+
+    # -----------------
+    # Saturation speedups bar chart + backing CSV.
+    plots_dir = liar_dir / "plots"
+    ensure_dir(plots_dir)
+
+    sat_csv_path = plots_dir / "saturation-speedups.csv"
+    sat_png_path = plots_dir / "saturation-speedups.png"
+
+    sat_rows = compute_saturation_speedup_rows(out_root=out_root)
+
+    with sat_csv_path.open("w", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["kernel", "baseline_time_s", "foresight_time_s", "speedup"],
+        )
+        writer.writeheader()
+        writer.writerows(sat_rows)
+
+    write_saturation_speedups_bar_chart(rows=sat_rows, out_path=sat_png_path)
+
+    eprint(f"[{EXPERIMENT_NAME}] Wrote saturation speedups CSV to: {sat_csv_path}")
+    eprint(f"[{EXPERIMENT_NAME}] Wrote saturation speedups bar chart to: {sat_png_path}")
 
 
 # Helper functions to reproduce Table 1 from the paper.
@@ -261,3 +294,147 @@ def compute_table1_rows(*, out_root: Path) -> list[dict[str, str]]:
         )
 
     return rows
+
+
+def compute_saturation_speedup_rows(*, out_root: Path) -> list[dict[str, str]]:
+    """Compute saturation speedups from BLAS overview CSVs.
+
+    Speedup is computed as:
+        speedup = baseline_time / foresight_time
+
+    using the `time` column from:
+      - out_root/liar/baseline/plots/blas-overview.csv
+      - out_root/liar/foresight/plots/blas-overview.csv
+
+    The returned list is in a deterministic order matching the order of kernels
+    found in the baseline CSV (excluding any existing "geomean" row). A
+    synthetic "geomean" row is appended.
+
+    Output row schema:
+      - kernel
+      - baseline_time_s
+      - foresight_time_s
+      - speedup
+    """
+
+    base_path = out_root / "liar" / "baseline" / "plots" / "blas-overview.csv"
+    fore_path = out_root / "liar" / "foresight" / "plots" / "blas-overview.csv"
+
+    # Preserve baseline CSV order for the chart.
+    baseline_order: list[str] = []
+    with base_path.open("r", newline="") as f:
+        r = csv.DictReader(f)
+        if r.fieldnames is None or "name" not in r.fieldnames or "time" not in r.fieldnames:
+            raise ValueError(f"CSV {base_path} missing required columns: name,time")
+        for row in r:
+            k = (row.get("name") or "").strip()
+            if not k or k == "geomean":
+                continue
+            baseline_order.append(k)
+
+    base = _read_csv_by_key(base_path, "name")
+    fore = _read_csv_by_key(fore_path, "name")
+
+    speedups: list[tuple[str, float, float, float]] = []
+
+    for k in baseline_order:
+        if k not in base or k not in fore:
+            continue
+        bt_s = base[k].get("time")
+        ft_s = fore[k].get("time")
+        if bt_s is None or ft_s is None:
+            continue
+
+        bt = _parse_float(bt_s, ctx=f"baseline time for {k}")
+        ft = _parse_float(ft_s, ctx=f"foresight time for {k}")
+        if ft <= 0.0:
+            continue
+
+        sp = bt / ft
+        speedups.append((k, bt, ft, sp))
+
+    # Geometric mean of speedups.
+    geomean = _geometric_mean([sp for (_, _, _, sp) in speedups])
+
+    out_rows: list[dict[str, str]] = []
+    for (k, bt, ft, sp) in speedups:
+        out_rows.append(
+            {
+                "kernel": k,
+                "baseline_time_s": f"{bt:.6f}",
+                "foresight_time_s": f"{ft:.6f}",
+                "speedup": f"{sp:.2f}",
+            }
+        )
+
+    out_rows.append(
+        {
+            "kernel": "geomean",
+            "baseline_time_s": "",
+            "foresight_time_s": "",
+            "speedup": f"{geomean:.2f}",
+        }
+    )
+
+    return out_rows
+
+
+def _geometric_mean(values: list[float]) -> float:
+    if not values:
+        return float("nan")
+    # Clamp to avoid log(0) / negative; speedups should be positive.
+    logs: list[float] = []
+    for v in values:
+        if v <= 0.0 or v != v or v == float("inf") or v == float("-inf"):
+            continue
+        logs.append(math.log(v))
+    if not logs:
+        return float("nan")
+    return math.exp(sum(logs) / len(logs))
+
+
+def write_saturation_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: Path) -> None:
+    """Write a bar chart similar to the paper figure.
+
+    Expects `rows` in the same schema as produced by
+    `compute_saturation_speedup_rows`.
+    """
+
+    kernels: list[str] = []
+    speedups: list[float] = []
+
+    for r in rows:
+        k = (r.get("kernel") or "").strip()
+        s = (r.get("speedup") or "").strip()
+        if not k or not s:
+            continue
+        try:
+            sp = float(s)
+        except ValueError:
+            continue
+        kernels.append(k)
+        speedups.append(sp)
+
+    if not kernels:
+        raise ValueError("No saturation speedup data to plot")
+
+    # Plot.
+    fig, ax = plt.subplots(figsize=(6.4, 3.2), dpi=150)
+    ax.bar(range(len(kernels)), speedups, edgecolor="black", linewidth=0.7)
+
+    ax.set_yscale("log")
+    ax.set_ylabel("Speedup")
+    ax.set_xlabel("Kernel")
+
+    ax.set_xticks(range(len(kernels)))
+    ax.set_xticklabels(kernels, rotation=45, ha="right")
+
+    # Annotate values on top of bars.
+    for i, sp in enumerate(speedups):
+        label = f"{sp:.0f}" if sp >= 10.0 else f"{sp:.2f}"
+        ax.text(i, sp, label, ha="center", va="bottom", fontsize=8)
+
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path)
+    plt.close(fig)
