@@ -37,9 +37,21 @@ After completion, you should see:
 ```text
 results/
 └── foresight-comparison/
-    ├── measurements.csv
     ├── ratios.csv
     └── ratios.png
+    incremental-eqsat/
+      sat-times.csv
+      sat-times.png
+    liar/
+      plots/
+        saturation-speedups.csv
+        saturation-speedups.png
+        parallelism-speedups-stencil2d.csv
+        parallelism-speedups-stencil2d.png
+        solution-speedups.csv
+        solution-speedups.png
+      tables/
+        improved-benchmarks.csv
 ```
 
 ---
