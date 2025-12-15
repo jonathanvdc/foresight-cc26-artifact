@@ -1,16 +1,27 @@
 # Artifact for *Parallel and Customizable Equality Saturation*
 
-This repository contains the evaluation artifact for the CC '26 paper:
+This repository contains the evaluation artifact for the CC ’26 paper:
 
 > **Parallel and Customizable Equality Saturation**
 
-The artifact is packaged as a self-contained Docker image that runs all experiments and produces the figures and tables reported in the paper.
+The artifact is distributed as a self‑contained Docker image. Running the container executes all experiments and reproduces the tables and figures reported in the paper, writing results to a user‑specified output directory.
+
+---
+
+## Overview
+
+The artifact evaluates **Foresight**, a parallel and customizable equality saturation engine, against several existing systems. It reproduces:
+
+- comparative runtime measurements
+- saturation and solution quality speedups
+- parallel scalability results
+- incremental equality saturation timing results
+
+All experiments are fully automated and require no manual intervention after starting the container.
 
 ---
 
 ## Quick Start
-
-To evaluate the artifact, the Docker container and run it directly.
 
 ### 1. Pull the container
 
@@ -32,100 +43,116 @@ This will:
 - run all experiments included in the artifact
 - write raw measurements, processed CSVs, and plots into `./results`
 
-After completion, you should see:
+---
+
+## Output Structure
+
+After completion, the output directory will contain:
 
 ```text
 results/
-└── foresight-comparison/
-    ├── ratios.csv
-    └── ratios.png
-    incremental-eqsat/
-      sat-times.csv
-      sat-times.png
-    liar/
-      plots/
-        saturation-speedups.csv
-        saturation-speedups.png
-        parallelism-speedups-stencil2d.csv
-        parallelism-speedups-stencil2d.png
-        solution-speedups.csv
-        solution-speedups.png
-      tables/
-        improved-benchmarks.csv
+├── foresight-comparison/
+│   ├── ratios.csv
+│   └── ratios.png
+├── incremental-eqsat/
+│   ├── sat-times.csv
+│   └── sat-times.png
+└── liar/
+    ├── plots/
+    │   ├── saturation-speedups.csv
+    │   ├── saturation-speedups.png
+    │   ├── parallelism-speedups-stencil2d.csv
+    │   ├── parallelism-speedups-stencil2d.png
+    │   ├── solution-speedups.csv
+    │   └── solution-speedups.png
+    └── tables/
+        └── improved-benchmarks.csv
 ```
+
+All CSV files are plain text and suitable for inspection or re‑plotting.
+
+---
 
 ## Mapping to Paper Figures and Tables
 
-The artifact produces CSV files and plots that directly correspond to the tables and figures in the paper:
+The artifact outputs correspond directly to the paper as follows:
 
-- **Table 1** → `liar/tables/improved-benchmarks.csv`  
+- **Table 1** → `liar/tables/improved-benchmarks.csv`  
   Benchmarks where Foresight strictly improves over the baseline.
 
-- **Figure 6** → `foresight-comparison/ratios.png`  
+- **Figure 6** → `foresight-comparison/ratios.png`  
   Normalized runtime comparison across equality saturation engines.
 
-- **Figure 7** → `liar/plots/saturation-speedups.png`  
+- **Figure 7** → `liar/plots/saturation-speedups.png`  
   Speedups from saturation optimizations relative to the LIAR baseline.
 
-- **Figure 8** → `liar/plots/parallelism-speedups-stencil2d.png`  
+- **Figure 8** → `liar/plots/parallelism-speedups-stencil2d.png`  
   Parallel scalability of Foresight on the `stencil2d` benchmark.
 
-- **Figure 9** → `liar/plots/solution-speedups.png`  
-  End-to-end solution quality speedups.
+- **Figure 9** → `liar/plots/solution-speedups.png`  
+  End‑to‑end solution quality speedups.
 
-- **Figure 10** → `incremental-eqsat/sat-times.png`  
+- **Figure 10** → `incremental-eqsat/sat-times.png`  
   Saturation time comparison for incremental equality saturation.
 
 ---
 
-## What the Artifact Does
+## Experiments
 
-The artifact evaluates **Foresight**, a parallel and customizable equality saturation engine, against several existing systems.
-The experiments reproduce the performance comparison discussed in the paper.
-
-Currently included experiment groups:
+The artifact currently includes the following experiment groups:
 
 - `foresight-comparison`
+- `liar`
 - `incremental-eqsat`
 
-### `foresight-comparison`
+### Foresight Comparison
 
-This experiment group compares Foresight against:
-  - egg
-  - hegg
-  - egglog
-  - slotted
+This experiment compares Foresight against:
+- egg
+- hegg
+- egglog
+- slotted
 
-For each benchmark kernel, the artifact:
+For each benchmark, the artifact:
 1. runs each system
-2. records wall-clock runtimes
-3. normalizes all runtimes relative to `egg`
-4. generates a CSV (`ratios.csv`) and a bar chart (`ratios.png`)
+2. records wall‑clock runtimes
+3. normalizes runtimes relative to `egg`
+4. produces `ratios.csv` and `ratios.png`
+
+### LIAR Benchmarks
+
+These experiments reproduce the LIAR‑based benchmarks used in the paper, producing:
+- saturation speedups
+- solution quality speedups
+- parallel scaling results
+
+### Incremental Equality Saturation
+
+This experiment measures saturation times for incremental equality saturation and produces both raw timing data and summary plots.
 
 ---
 
 ## Selecting Experiments
 
-By default, all available experiments are run.
-You may optionally select a subset by passing positional arguments to the container.
+By default, **all experiments are run**.
 
-For example, to run only the Foresight comparison:
+You may run a subset by passing experiment names as positional arguments:
 
 ```sh
 docker run --rm -it \
   --mount type=bind,src=$PWD/results,dst=/results \
   ghcr.io/jonathanvdc/foresight-cc26-artifact:latest \
-  foresight-comparison
+  foresight-comparison incremental-eqsat
 ```
 
 ---
 
 ## Configuration (Optional)
 
-The container exposes a small number of environment variables for reproducibility experiments:
+The container exposes a small number of environment variables for reproducibility and scaling experiments:
 
-| Variable | Default | Meaning |
-|--------|---------|---------|
+| Variable | Default | Description |
+|--------|---------|-------------|
 | `BENCH_SECONDS` | `60` | Time budget per benchmark (seconds) |
 | `FORESIGHT_THREAD_COUNTS` | `"1 8"` | Thread counts used for parallel Foresight |
 
@@ -138,18 +165,6 @@ docker run --rm -it \
   -e FORESIGHT_THREAD_COUNTS="1 4 8" \
   ghcr.io/jonathanvdc/foresight-cc26-artifact:latest
 ```
-
----
-
-## Output Files
-
-Each experiment writes its results to a subdirectory of `/results`:
-
-- `measurements.csv` – raw benchmark timings
-- `ratios.csv` – timings normalized to `egg`
-- `ratios.png` – bar chart used for visual comparison
-
-All CSV files are plain-text and suitable for inspection or re-plotting.
 
 ---
 
@@ -173,8 +188,9 @@ docker run --rm -it \
 
 ## Notes for Reviewers
 
-- Once built, the Docker image is fully self-contained.
-- The container does not require network access at runtime.
+- The Docker image is fully self‑contained once pulled.
+- No network access is required at runtime.
+- All results reported in the paper can be regenerated using the commands above.
 
 ---
 
