@@ -387,8 +387,9 @@ def compute_saturation_speedup_rows(*, out_root: Path) -> list[dict[str, str]]:
     speedups: list[tuple[str, float, float, float]] = []
 
     for k in baseline_order:
-        if k not in base or k not in fore:
+        if k not in base or k not in fore or k == 'gemver':
             continue
+
         bt_s = base[k].get("time")
         ft_s = fore[k].get("time")
         if bt_s is None or ft_s is None:
