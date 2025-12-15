@@ -2,7 +2,7 @@
 """LIAR experiment module.
 
 Outputs (relative to out_root):
-  results/liar/
+  liar/
     baseline/
     foresight/
 
