@@ -155,7 +155,9 @@ def process_results(*, out_root: Path) -> None:
 
     # -----------------
     # Table 1 (paper).
-    table1_path = liar_dir / "table-1.csv"
+    tables_dir = liar_dir / "tables"
+    ensure_dir(tables_dir)
+    table1_path = tables_dir / "improved-benchmarks.csv"
     table1_rows = compute_table1_rows(out_root=out_root)
     # Deterministic order.
     table1_rows.sort(key=lambda r: r.get("kernel", ""))
@@ -168,7 +170,7 @@ def process_results(*, out_root: Path) -> None:
         writer.writeheader()
         writer.writerows(table1_rows)
 
-    eprint(f"[{EXPERIMENT_NAME}] Wrote Table 1 to: {table1_path}")
+    eprint(f"[{EXPERIMENT_NAME}] Wrote improved benchmarks to: {table1_path}")
 
     # -----------------
     # Saturation speedups bar chart + backing CSV.
