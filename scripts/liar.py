@@ -135,6 +135,7 @@ def run_experiments(
             "--engine=foresight",
             f"--foresight-thread-counts={foresight_threads}",
             "--optimize-only",
+            "--exclude-advanced-strategies",
             "stencil2d",
         ],
         cwd=foresight_parallel_dir,
