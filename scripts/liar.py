@@ -690,6 +690,15 @@ def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: P
     # Collect rows by kernel first so we can emit in a stable order.
     by_kernel: dict[str, tuple[float, float, float]] = {}
 
+    def _f(s: str) -> float | None:
+        s = (s or "").strip()
+        if not s:
+            return None
+        try:
+            return float(s)
+        except ValueError:
+            return None
+
     def _nan_if_missing(v: float | None) -> float:
         return float("nan") if v is None else v
 
@@ -735,15 +744,6 @@ def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: P
 
     if not kernels:
         raise ValueError("No solution speedup data to plot")
-
-    def _f(s: str) -> float | None:
-        s = (s or "").strip()
-        if not s:
-            return None
-        try:
-            return float(s)
-        except ValueError:
-            return None
         
     def _span_from_one(vals: list[float]) -> tuple[list[float], list[float]]:
         """Return (bottoms, heights) so each bar spans between 1.0 and v."""
