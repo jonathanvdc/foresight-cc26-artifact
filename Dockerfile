@@ -108,7 +108,7 @@ RUN cd /workspace/incremental-eqsat/foresight && sbt benchmarks/jmh:compile
 # Clone LIAR repository
 RUN git clone --recursive https://bitbucket.org/cdubach/shir.git /workspace/liar \
  && cd /workspace/liar \
- && git checkout 7df97cda64d031ca3ef863dd4e52d257387c9b5c \
+ && git checkout 4bd2841c2d2c8bdb2300403e4ca98bf6889a3482 \
  && git submodule update --init --recursive
 
 # Pre-build LIAR project
