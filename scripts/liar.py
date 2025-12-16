@@ -762,20 +762,6 @@ def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: P
                 heights.append(1.0 - v)
         return bottoms, heights
 
-    for r in rows:
-        k = (r.get("kernel") or "").strip()
-        if not k:
-            continue
-        c = _f(r.get("classic_eqsat_speedup") or "")
-        if c is None:
-            continue
-        kernels.append(k)
-        classic.append(c)
-        isaria.append(_f(r.get("isaria_speedup") or "") or float("nan"))
-        sympy.append(_f(r.get("sympy_speedup") or "") or float("nan"))
-
-    if not kernels:
-        raise ValueError("No solution speedup data to plot")
 
     n = len(kernels)
     x = list(range(n))
