@@ -481,7 +481,7 @@ def write_saturation_speedups_bar_chart(*, rows: list[dict[str, str]], out_path:
 
     # Annotate values on top of bars.
     for i, sp in enumerate(speedups):
-        label = f"{sp:.0f}" if sp >= 10.0 else f"{sp:.2f}"
+        label = f"{sp:.2f}"
         ax.text(i, sp, label, ha="center", va="bottom", fontsize=8)
 
     fig.tight_layout()
