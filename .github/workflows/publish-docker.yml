@@ -47,7 +47,8 @@ jobs:
             *) echo "Unsupported platform: ${{ matrix.platform }}"; exit 1 ;;
           esac
 
-      - name: Build and push image (${{ matrix.platform }})
+      - name: Build and push image (${{ matrix.platform }}) (arm64, cached)
+        if: matrix.platform == 'linux/arm64'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -59,6 +60,18 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ steps.meta.outputs.arch }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build and push image (${{ matrix.platform }}) (amd64)
+        if: matrix.platform == 'linux/amd64'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: ${{ matrix.platform }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest-${{ steps.meta.outputs.arch }}
+            ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ steps.meta.outputs.arch }}
 
   manifest:
     runs-on: ubuntu-latest
