@@ -789,23 +789,23 @@ def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: P
     # Clamp around 1.0, matching the paper's plot bounds.
     ax.set_ylim(10 ** (-0.2), 10 ** (0.2))
 
-    def _annotate(bars, vals: list[float]):
-        for bar, v in zip(bars, vals):
-            if v != v or v in (float("inf"), float("-inf")) or v <= 0.0:
-                continue
-            xc = bar.get_x() + bar.get_width() / 2.0
+    # def _annotate(bars, vals: list[float]):
+    #     for bar, v in zip(bars, vals):
+    #         if v != v or v in (float("inf"), float("-inf")) or v <= 0.0:
+    #             continue
+    #         xc = bar.get_x() + bar.get_width() / 2.0
 
-            # Bars span between 1 and v. Put the label near the v end.
-            if v >= 1.0:
-                txt = f"{v:.1f}" if v < 100 else f"{v:.0f}"
-                ax.text(xc, v * 1.08, txt, ha="center", va="bottom", fontsize=7)
-            else:
-                txt = f"{v:.5g}"
-                ax.text(xc, v / 1.15, txt, ha="center", va="top", fontsize=7)
+    #         # Bars span between 1 and v. Put the label near the v end.
+    #         if v >= 1.0:
+    #             txt = f"{v:.1f}" if v < 100 else f"{v:.0f}"
+    #             ax.text(xc, v * 1.08, txt, ha="center", va="bottom", fontsize=7)
+    #         else:
+    #             txt = f"{v:.5g}"
+    #             ax.text(xc, v / 1.15, txt, ha="center", va="top", fontsize=7)
 
-    _annotate(b1, classic)
-    _annotate(b2, isaria)
-    _annotate(b3, sympy)
+    # _annotate(b1, classic)
+    # _annotate(b2, isaria)
+    # _annotate(b3, sympy)
 
     ax.legend(loc="upper right", fontsize=8)
 
