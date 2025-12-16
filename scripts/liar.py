@@ -750,16 +750,8 @@ def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: P
     ax.set_xticklabels(kernels, rotation=45, ha="right")
     ax.axhline(1.0, linewidth=0.8)
 
-    # Choose a reasonable y-range based on finite values.
-    finite_vals: list[float] = []
-    for arr in (classic, isaria, sympy):
-        for v in arr:
-            if v == v and v not in (float("inf"), float("-inf")) and v > 0.0:
-                finite_vals.append(v)
-    if finite_vals:
-        ymin = min(finite_vals)
-        ymax = max(finite_vals)
-        ax.set_ylim(max(1e-4, ymin / 3.0), ymax * 3.0)
+    # Clamp around 1.0, matching the paper's plot bounds.
+    ax.set_ylim(10 ** (-0.2), 10 ** (0.2))
 
     def _annotate(bars):
         for bar in bars:
