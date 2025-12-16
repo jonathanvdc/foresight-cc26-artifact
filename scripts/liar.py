@@ -681,10 +681,60 @@ def compute_solution_speedup_rows(*, out_root: Path) -> list[dict[str, str]]:
 def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: Path) -> None:
     """Write a grouped bar chart for classic/isaria/sympy speedups (Figure 9 style)."""
 
+    # Desired x-axis order (matches paper figure ordering).
+    desired_order = [
+        "2mm","atax","doitgen","gemm","gesummv","jacobi1d","mvt","1mm","axpy",
+        "blur1d","gemv","memset","slim-2mm","stencil2d","vsum","geomean",
+    ]
+
+    # Collect rows by kernel first so we can emit in a stable order.
+    by_kernel: dict[str, tuple[float, float, float]] = {}
+
+    def _nan_if_missing(v: float | None) -> float:
+        return float("nan") if v is None else v
+
+    for r in rows:
+        k = (r.get("kernel") or "").strip()
+        if not k:
+            continue
+        c = _f(r.get("classic_eqsat_speedup") or "")
+        if c is None:
+            continue
+        i = _f(r.get("isaria_speedup") or "")
+        s = _f(r.get("sympy_speedup") or "")
+        by_kernel[k] = (c, _nan_if_missing(i), _nan_if_missing(s))
+
     kernels: list[str] = []
     classic: list[float] = []
     isaria: list[float] = []
     sympy: list[float] = []
+
+    # Emit in the desired order, skipping any missing kernels.
+    for k in desired_order:
+        if k not in by_kernel:
+            continue
+        c, i, s = by_kernel[k]
+        kernels.append(k)
+        classic.append(c)
+        isaria.append(i)
+        sympy.append(s)
+
+    # Append any unexpected kernels deterministically, just before geomean if present.
+    extras = sorted([k for k in by_kernel.keys() if k not in desired_order])
+    if extras:
+        insert_at = len(kernels)
+        if kernels and kernels[-1] == "geomean":
+            insert_at -= 1
+        for k in extras:
+            c, i, s = by_kernel[k]
+            kernels.insert(insert_at, k)
+            classic.insert(insert_at, c)
+            isaria.insert(insert_at, i)
+            sympy.insert(insert_at, s)
+            insert_at += 1
+
+    if not kernels:
+        raise ValueError("No solution speedup data to plot")
 
     def _f(s: str) -> float | None:
         s = (s or "").strip()
@@ -753,25 +803,29 @@ def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: P
     # Clamp around 1.0, matching the paper's plot bounds.
     ax.set_ylim(10 ** (-0.2), 10 ** (0.2))
 
-    def _annotate(bars):
-        for bar in bars:
-            h = bar.get_height()
-            if h != h or h <= 0.0 or h in (float("inf"), float("-inf")):
+    def _annotate(bars, vals: list[float]):
+        for bar, v in zip(bars, vals):
+            if v != v or v in (float("inf"), float("-inf")) or v <= 0.0:
                 continue
             xc = bar.get_x() + bar.get_width() / 2.0
-            if h >= 1.0:
-                txt = f"{h:.1f}" if h < 100 else f"{h:.0f}"
-                ax.text(xc, h * 1.08, txt, ha="center", va="bottom", fontsize=7)
-            else:
-                txt = f"{h:.5g}"
-                ax.text(xc, h / 1.25, txt, ha="center", va="top", fontsize=7)
 
-    _annotate(b1)
-    _annotate(b2)
-    _annotate(b3)
+            # Bars span between 1 and v. Put the label near the v end.
+            if v >= 1.0:
+                txt = f"{v:.1f}" if v < 100 else f"{v:.0f}"
+                ax.text(xc, v * 1.08, txt, ha="center", va="bottom", fontsize=7)
+            else:
+                txt = f"{v:.5g}"
+                ax.text(xc, v / 1.15, txt, ha="center", va="top", fontsize=7)
+
+    _annotate(b1, classic)
+    _annotate(b2, isaria)
+    _annotate(b3, sympy)
 
     ax.legend(loc="upper right", fontsize=8)
+
     fig.tight_layout()
+    fig.subplots_adjust(bottom=0.33)
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path)
     plt.close(fig)
