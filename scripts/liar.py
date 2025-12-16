@@ -19,7 +19,7 @@ Baseline (cwd = results/liar/baseline):
   python3 liar/src/scripts/liar-evaluation/evaluate_all.py -t300 --limit-steps
 
 Foresight (cwd = results/liar/foresight):
-  1) python3 ... --engine=foresight --foresight-thread-counts=1-8 stencil2d --optimize-only
+  1) python3 ... --engine=foresight --foresight-thread-counts=1-8 stencil2d --optimize-only --exclude-advanced-strategies
   2) python3 ... --engine=foresight --foresight-thread-counts=1
 """
 
