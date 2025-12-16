@@ -694,6 +694,23 @@ def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: P
             return float(s)
         except ValueError:
             return None
+        
+    def _span_from_one(vals: list[float]) -> tuple[list[float], list[float]]:
+        """Return (bottoms, heights) so each bar spans between 1.0 and v."""
+        bottoms: list[float] = []
+        heights: list[float] = []
+        for v in vals:
+            if v != v or v in (float("inf"), float("-inf")) or v <= 0.0:
+                bottoms.append(float("nan"))
+                heights.append(float("nan"))
+                continue
+            if v >= 1.0:
+                bottoms.append(1.0)
+                heights.append(v - 1.0)
+            else:
+                bottoms.append(v)
+                heights.append(1.0 - v)
+        return bottoms, heights
 
     for r in rows:
         k = (r.get("kernel") or "").strip()
@@ -716,9 +733,16 @@ def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: P
 
     fig, ax = plt.subplots(figsize=(10.0, 2.8), dpi=150)
 
-    b1 = ax.bar([xi - w for xi in x], classic, width=w, edgecolor="black", linewidth=0.6, label="Classic EqSat")
-    b2 = ax.bar(x, isaria, width=w, edgecolor="black", linewidth=0.6, label="Isaria")
-    b3 = ax.bar([xi + w for xi in x], sympy, width=w, edgecolor="black", linewidth=0.6, label="SymPy")
+    classic_bottom, classic_h = _span_from_one(classic)
+    isaria_bottom, isaria_h = _span_from_one(isaria)
+    sympy_bottom, sympy_h = _span_from_one(sympy)
+
+    b1 = ax.bar([xi - w for xi in x], classic_h, bottom=classic_bottom, width=w,
+                edgecolor="black", linewidth=0.6, label="Classic EqSat")
+    b2 = ax.bar(x, isaria_h, bottom=isaria_bottom, width=w,
+                edgecolor="black", linewidth=0.6, label="Isaria")
+    b3 = ax.bar([xi + w for xi in x], sympy_h, bottom=sympy_bottom, width=w,
+                edgecolor="black", linewidth=0.6, label="SymPy")
 
     ax.set_yscale("log")
     ax.set_ylabel("Speedup")
