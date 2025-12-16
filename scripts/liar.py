@@ -728,19 +728,19 @@ def write_solution_speedups_bar_chart(*, rows: list[dict[str, str]], out_path: P
         isaria.append(i)
         sympy.append(s)
 
-    # Append any unexpected kernels deterministically, just before geomean if present.
-    extras = sorted([k for k in by_kernel.keys() if k not in desired_order])
-    if extras:
-        insert_at = len(kernels)
-        if kernels and kernels[-1] == "geomean":
-            insert_at -= 1
-        for k in extras:
-            c, i, s = by_kernel[k]
-            kernels.insert(insert_at, k)
-            classic.insert(insert_at, c)
-            isaria.insert(insert_at, i)
-            sympy.insert(insert_at, s)
-            insert_at += 1
+    # # Append any unexpected kernels deterministically, just before geomean if present.
+    # extras = sorted([k for k in by_kernel.keys() if k not in desired_order])
+    # if extras:
+    #     insert_at = len(kernels)
+    #     if kernels and kernels[-1] == "geomean":
+    #         insert_at -= 1
+    #     for k in extras:
+    #         c, i, s = by_kernel[k]
+    #         kernels.insert(insert_at, k)
+    #         classic.insert(insert_at, c)
+    #         isaria.insert(insert_at, i)
+    #         sympy.insert(insert_at, s)
+    #         insert_at += 1
 
     if not kernels:
         raise ValueError("No solution speedup data to plot")
